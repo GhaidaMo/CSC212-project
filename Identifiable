@@ -1,0 +1,6 @@
+package dsproj;
+
+public interface Identifiable {
+    String getId();
+}
+
