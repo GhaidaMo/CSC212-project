@@ -1,0 +1,101 @@
+package dsproj;
+
+import java.time.LocalDate;
+
+public class Insights {
+    private Repository<Product> products;
+    private Repository<Review> reviews;
+    private Repository<Order> orders;
+
+    public Insights(Repository<Product> p, Repository<Review> r, Repository<Order> o) {
+        products = p; reviews = r; orders = o;
+    }
+
+    public void attachReviewsToProducts() {
+        LinkedList<Review> revs = reviews.asList();
+        if (revs.empty()) return;
+        revs.findFirst();
+        while (true) {
+            Review r = revs.retrieve();
+            Product p = products.findById(r.getProductId());
+            if (p != null) p.applyNewRating(r.getRating());
+            if (revs.last()) break; revs.findNext();
+        }
+    }
+
+    public Product[] top3ProductsByAverageRating() {
+        Product a = null, b = null, c = null;
+        LinkedList<Product> ps = products.asList();
+        if (!ps.empty()) {
+            ps.findFirst();
+            while (true) {
+                Product p = ps.retrieve();
+                double v = p.getAverageRating();
+                if (a == null || v > a.getAverageRating()) { c = b; b = a; a = p; }
+                else if (b == null || v > b.getAverageRating()) { c = b; b = p; }
+                else if (c == null || v > c.getAverageRating()) { c = p; }
+                if (ps.last()) break; ps.findNext();
+            }
+        }
+        return new Product[]{a, b, c};
+    }
+
+    public void displayOrdersBetween(LocalDate s, LocalDate e) {
+        LinkedList<Order> os = orders.asList();
+        if (os.empty()) return;
+        os.findFirst();
+        while (true) {
+            Order o = os.retrieve();
+            LocalDate d = o.getOrderDate();
+            if (d != null && !d.isBefore(s) && !d.isAfter(e)) o.display();
+            if (os.last()) break; os.findNext();
+        }
+    }
+
+    // O(a * b): nested contains over two small lists of productIds
+    public void showCommonHighRatedProducts(String custA, String custB, double threshold) {
+        LinkedList<String> A = new LinkedList<>();
+        LinkedList<String> B = new LinkedList<>();
+
+        // Collect productIds rated > threshold by each customer
+        LinkedList<Review> revs = reviews.asList();
+        if (!revs.empty()) {
+            revs.findFirst();
+            while (true) {
+                Review r = revs.retrieve();
+                if (r.getRating() > threshold) {
+                    if (r.getCustomerId().equals(custA)) appendString(A, r.getProductId());
+                    if (r.getCustomerId().equals(custB)) appendString(B, r.getProductId());
+                }
+                if (revs.last()) break; revs.findNext();
+            }
+        }
+
+        // Print intersection
+        System.out.println("Common products (rating > " + threshold + "):");
+        if (!A.empty()) {
+            A.findFirst();
+            while (true) {
+                String pid = A.retrieve();
+                if (contains(B, pid)) System.out.println(pid);
+                if (A.last()) break; A.findNext();
+            }
+        }
+    }
+
+    private void appendString(LinkedList<String> list, String value) {
+        if (list.empty()) list.insert(value);
+        else { list.findFirst(); while (!list.last()) list.findNext(); list.insert(value); }
+    }
+
+    private boolean contains(LinkedList<String> list, String key) {
+        if (list.empty()) return false;
+        list.findFirst();
+        while (true) {
+            if (key.equals(list.retrieve())) return true;
+            if (list.last()) break; list.findNext();
+        }
+        return false;
+    }
+}
+
